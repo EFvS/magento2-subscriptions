@@ -82,28 +82,11 @@ class SendPrePaymentReminderEmailCron
         $today = (new \DateTime())->format('Y-m-d');
 
         $interval = new \DateInterval('P' . $this->config->daysBeforePrepaymentReminder() . 'D');
-        $prepaymentDate = (new \DateTimeImmutable())->sub($interval);
+        $prepaymentDate = (new \DateTimeImmutable())->add($interval);
 
         $criteria = $this->searchCriteriaBuilderFactory->create();
         $criteria->addFilter('next_payment_date', $prepaymentDate->format('Y-m-d'), 'eq');
-
-        $lastReminderDateNull = $this->filterBuilder
-            ->setField('last_reminder_date')
-            ->setConditionType('null')
-            ->create();
-
-        $lastReminderDateNotToday = $this->filterBuilder
-            ->setField('last_reminder_date')
-            ->setConditionType('neq')
-            ->setValue($today)
-            ->create();
-
-        $criteria->setFilterGroups([
-            $this->filterGroupBuilder
-                ->addFilter($lastReminderDateNull)
-                ->addFilter($lastReminderDateNotToday)
-                ->create()
-        ]);
+        $criteria->addFilter('last_reminder_date', $today, 'neq');
 
         $subscriptions = $this->subscriptionToProductRepository->getList($criteria->create());
         foreach ($subscriptions->getItems() as $subscription) {
